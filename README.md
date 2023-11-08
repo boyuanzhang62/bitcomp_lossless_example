@@ -1,4 +1,4 @@
-# Bitcomp Utility
+# Bitcomp Lossless Example
 
 ## Introduction
 Bitcomp is a powerful tool for lossless file compression and decompression. It efficiently compresses files, ensuring that your data is stored in a compact format without any loss of information.
@@ -10,7 +10,7 @@ Before using Bitcomp, make sure to install it on your system. Follow the install
 
 ### Preparation
 
-Modify the `Makefile` to change the `"/home/bozhan/repo/nvcomp/lib"` and `"/home/bozhan/repo/nvcomp/include/"` to your own installed nvcomp path. Then:
+Modify the `Makefile` to change the `/home/bozhan/repo/nvcomp/lib` and `/home/bozhan/repo/nvcomp/include/` to your own installed nvcomp path. Then:
 
 ```bash
 make -j
@@ -24,7 +24,7 @@ To compress a file with Bitcomp, use the following command:
 ./bitcomp_example -c /path/to/file
 ```
 
-This will compress the file located at `/path/to/file` using Bitcomp's lossless compression algorithm. The compressed file name is the original name + ".bitcomp."
+This will compress the file located at `/path/to/file` using Bitcomp's lossless compression algorithm. The compressed file name is `/path/to/file.bitcomp`.
 
 ### Decompression
 To decompress a file that has been compressed using Bitcomp, use the command:
@@ -33,7 +33,7 @@ To decompress a file that has been compressed using Bitcomp, use the command:
 ./bitcomp_example -d /path/to/compressed/file
 ```
 
-Here, `/path/to/compressed/file` is the path to the file that you want to decompress. The decompressed file name is the input name + ".decompressed."
+Here, `/path/to/compressed/file` is the path to the file that you want to decompress. The decompressed file name is `/path/to/compressed/file.decompressed`.
 
 ### Roundtrip Verification
 For a roundtrip process (compress and then decompress a file), and to verify the integrity and correctness of the process, use:
