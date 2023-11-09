@@ -46,6 +46,8 @@
 
 #include "utils.h"
 
+#define DATA_TYPE uint8_t
+
 #define CUDA_CHECK(func)                                                        \
     do                                                                          \
     {                                                                           \
@@ -74,13 +76,14 @@
         }                                                      \
     }
 
-float *compress(char *filePath)
+template <typename T>
+T *compress(char *filePath)
 {
     size_t fileSize = io::FileSize(filePath);
-    float *inputHost = (float *)malloc(fileSize);
-    io::read_binary_to_array<float>(filePath, inputHost, fileSize / sizeof(float));
+    T *inputHost = (T *)malloc(fileSize);
+    io::read_binary_to_array<T>(filePath, inputHost, fileSize / sizeof(T));
 
-    float *inputDevice;
+    T *inputDevice;
     CUDA_CHECK(cudaMalloc(&inputDevice, fileSize));
     CUDA_CHECK(cudaMemcpy(inputDevice, inputHost, fileSize, cudaMemcpyHostToDevice));
 
@@ -99,7 +102,7 @@ float *compress(char *filePath)
     BITCOMP_CHECK(bitcompCreatePlan(
         &plan,                  // Bitcomp handle
         fileSize,               // Size in bytes of the uncompressed data
-        BITCOMP_FP32_DATA,      // Data type
+        BITCOMP_UNSIGNED_8BIT,  // Data type
         BITCOMP_LOSSLESS,       // Compression type
         BITCOMP_DEFAULT_ALGO)); // Bitcomp algo, default or sparse
 
@@ -158,7 +161,8 @@ float *compress(char *filePath)
     return inputHost;
 }
 
-float *decompress(char *filePath, size_t originalSize)
+template <typename T>
+T *decompress(char *filePath, size_t originalSize)
 {
     size_t fileSize = io::FileSize(filePath);
     char *inputHost = (char *)malloc(fileSize);
@@ -178,7 +182,7 @@ float *decompress(char *filePath, size_t originalSize)
     cudaEventCreate(&stop);
 
     // Allocate a buffer for the decompressed data
-    float *outputDevice;
+    T *outputDevice;
     CUDA_CHECK(cudaMalloc(&outputDevice, originalSize));
 
     // Create a bitcomp plan to compress FP32 data using a signed integer
@@ -187,7 +191,7 @@ float *decompress(char *filePath, size_t originalSize)
     BITCOMP_CHECK(bitcompCreatePlan(
         &plan,                  // Bitcomp handle
         originalSize,           // Size in bytes of the uncompressed data
-        BITCOMP_FP32_DATA,      // Data type
+        BITCOMP_UNSIGNED_8BIT,  // Data type
         BITCOMP_LOSSLESS,       // Compression type
         BITCOMP_DEFAULT_ALGO)); // Bitcomp algo, default or sparse
 
@@ -215,10 +219,10 @@ float *decompress(char *filePath, size_t originalSize)
     std::cout << "Decompression elapsed time: " << milliseconds << " ms" << std::endl;
     std::cout << "Decompression throughput: " << static_cast<float>(originalSize) / 1024 / 1024 / milliseconds << " GB/s" << std::endl;
 
-    float *outputHost = (float *)malloc(originalSize);
+    T *outputHost = (T *)malloc(originalSize);
     CUDA_CHECK(cudaMemcpy(outputHost, outputDevice, originalSize, cudaMemcpyDeviceToHost));
     std::string str(filePath);
-    io::write_array_to_binary<float>(str + ".decompressed", outputHost, originalSize / sizeof(float));
+    io::write_array_to_binary<T>(str + ".decompressed", outputHost, originalSize / sizeof(T));
 
     // Clean up
     BITCOMP_CHECK(bitcompDestroyPlan(plan));
@@ -230,16 +234,17 @@ float *decompress(char *filePath, size_t originalSize)
     return outputHost;
 }
 
+template <typename T>
 void roundTripVerification(char *filePath)
 {
     size_t fileSize = io::FileSize(filePath);
-    float *originalData = compress(filePath);
+    T *originalData = compress<T>(filePath);
     std::string str(filePath);
     str = str + ".bitcomp";
     char *compressedFilePath = (char *)str.c_str();
-    float *reconstructedData = decompress(compressedFilePath, fileSize);
+    T *reconstructedData = decompress<T>(compressedFilePath, fileSize);
 
-    for (int i = 0; i < fileSize / sizeof(float); i++)
+    for (int i = 0; i < fileSize / sizeof(T); i++)
     {
         if (originalData[i] != reconstructedData[i])
         {
@@ -257,18 +262,18 @@ int main(int argc, char *argv[])
 {
     if (strcmp(argv[1], "-c") == 0)
     {
-        float *originalData = compress(argv[2]);
+        DATA_TYPE *originalData = compress<DATA_TYPE>(argv[2]);
         free(originalData);
     }
     else if (strcmp(argv[1], "-d") == 0)
     {
         size_t originalSize = std::stoi(argv[3]);
-        float *reconstructedData = decompress(argv[2], originalSize);
+        DATA_TYPE *reconstructedData = decompress<DATA_TYPE>(argv[2], originalSize);
         free(reconstructedData);
     }
     else if (strcmp(argv[1], "-r") == 0)
     {
-        roundTripVerification(argv[2]);
+        roundTripVerification<DATA_TYPE>(argv[2]);
     }
 
     return 0;
